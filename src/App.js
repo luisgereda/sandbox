@@ -22,7 +22,7 @@ const App = () => {
   const [client, setClient] = useState(null);
 
   useEffect(() => {
-    const newClient = new StreamChat("5ej6fmrv2xj2");
+    const newClient = new StreamChat("APPKEY");
 
     const handleConnectionChange = ({ online = false }) => {
       if (!online) return console.log("connection lost");
