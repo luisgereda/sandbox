@@ -1,8 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   useChannelActionContext,
   useChannelStateContext,
 } from "stream-chat-react";
+
+const useDebounce = (functionToDebounce, timeout) => {
+  const timeoutReference = useRef(null);
+
+  return useCallback(
+    (...args) => {
+      if (timeoutReference.current !== null) {
+        clearTimeout(timeoutReference.current);
+        timeoutReference.current = null;
+      }
+
+      timeoutReference.current = setTimeout(
+        functionToDebounce,
+        timeout,
+        ...args
+      );
+    },
+    [functionToDebounce, timeout]
+  );
+};
 
 const PinnedHeader = () => {
   const { channel } = useChannelStateContext();
@@ -30,22 +50,32 @@ const PinnedHeader = () => {
     func();
   }, []);
 
-  const click = () => {
-    console.log("called");
-    console.log(msgs, message.mid);
-    const pos = msgs.findIndex(({ id }) => id === message.mid);
-    const next = (pos + 1) % msgs.length;
-    console.log({ pos, next });
-    if (pos > -1) {
-      setMessage({
-        mid: msgs[next].id,
-        text: msgs[next].text,
-      });
-    }
-    jumpToMessage(message.mid);
-  };
+  const debouncedJumpToMessage = useDebounce(jumpToMessage, 300);
+
+  useEffect(() => {
+    if (typeof message?.mid !== "string") return;
+
+    debouncedJumpToMessage(message.mid);
+  }, [message?.mid]);
+
+  const click = useCallback(
+    () =>
+      setMessage((message) => {
+        const pos = msgs.findIndex(({ id }) => id === message.mid);
+        const next = (pos + 1) % msgs.length;
+
+        if (pos < 0) return message;
+
+        return {
+          mid: msgs[next].id,
+          text: msgs[next].text,
+        };
+      }),
+    [msgs]
+  );
+
   if (!message) return null;
-  console.log(message.text);
+
   return (
     <button className="pinned" onClick={click}>
       {message.text ? message.text : "IMAGE"}
